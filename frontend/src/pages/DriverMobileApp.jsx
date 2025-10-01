@@ -5,6 +5,7 @@ import {
   User, Settings, Bell, Search, Filter, ChevronRight,
   DollarSign, Calendar, Route, Camera, MessageSquare
 } from 'lucide-react';
+import { supabase } from '../supabase/supabase';
 
 import StatusBadge from '../components/badges/StatusBadge';
 import UrgencyBadge from '../components/badges/UrgencyBadge';
@@ -12,11 +13,11 @@ import CargoCard from '../components/CargoCard';
 import BottomNav from '../components/BottomNav';
 import StatusToggle from '../components/StatusToggle';
 
-// 메인 컴포넌트
-const DriverMobileApp = () => {
+const DriverMobileApp = ({ user, profile: initialProfile }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [driverStatus, setDriverStatus] = useState('available');
   const [currentDelivery, setCurrentDelivery] = useState(null);
+  const [profile, setProfile] = useState(initialProfile);
   const [availableOrders, setAvailableOrders] = useState([
     {
       id: 'CG001',
@@ -41,10 +42,10 @@ const DriverMobileApp = () => {
   ]);
 
   const [todayStats] = useState({
-    deliveries: 3,
-    earnings: '540,000원',
-    distance: '156km',
-    hours: '8시간 30분'
+    deliveries: profile?.total_deliveries || 0,
+    earnings: '0원',
+    distance: '0km',
+    hours: '0시간'
   });
 
   const handleStatusChange = (newStatus) => {
@@ -62,18 +63,40 @@ const DriverMobileApp = () => {
     setAvailableOrders(prev => prev.filter(o => o.id !== orderId));
   };
 
-  const handleCompleteDelivery = () => {
+  const handleCompleteDelivery = async () => {
+    // 배송 완료 시 총 배송 건수 업데이트
+    try {
+      const { error } = await supabase
+        .from('driver_profiles')
+        .update({ 
+          total_deliveries: (profile.total_deliveries || 0) + 1 
+        })
+        .eq('user_id', user.id);
+
+      if (!error) {
+        setProfile(prev => ({
+          ...prev,
+          total_deliveries: (prev.total_deliveries || 0) + 1
+        }));
+      }
+    } catch (error) {
+      console.error('배송 완료 업데이트 실패:', error);
+    }
+
     setCurrentDelivery(null);
     setDriverStatus('available');
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
   };
 
   // 홈 탭 컨텐츠
   const HomeContent = () => (
     <div className="space-y-4">
-      {/* 상태 토글 */}
       <StatusToggle status={driverStatus} onStatusChange={handleStatusChange} />
       
-      {/* 현재 배송 */}
       {currentDelivery && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
@@ -103,7 +126,6 @@ const DriverMobileApp = () => {
         </div>
       )}
       
-      {/* 오늘의 통계 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <h3 className="font-semibold text-gray-900 mb-3">오늘의 성과</h3>
         <div className="grid grid-cols-2 gap-4">
@@ -126,7 +148,6 @@ const DriverMobileApp = () => {
         </div>
       </div>
 
-      {/* 사용 가능한 주문 */}
       {driverStatus === 'available' && availableOrders.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-4">
@@ -148,89 +169,49 @@ const DriverMobileApp = () => {
     </div>
   );
 
-  // 주문 탭 컨텐츠
   const OrdersContent = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <h3 className="font-semibold text-gray-900 mb-4">주문 기록</h3>
         
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex-1">
-              <div className="flex items-center space-x-2">
-                <CheckCircle size={16} className="text-green-600" />
-                <span className="font-medium text-green-800">CG003 완료</span>
-              </div>
-              <p className="text-sm text-green-600">부산 → 대구</p>
-              <p className="text-xs text-gray-500">13:45 완료</p>
+          {profile.total_deliveries === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              아직 완료된 배송이 없습니다
             </div>
-            <p className="font-semibold text-green-600">320,000원</p>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-            <div className="flex-1">
-              <div className="flex items-center space-x-2">
-                <CheckCircle size={16} className="text-gray-600" />
-                <span className="font-medium text-gray-800">CG002 완료</span>
+          ) : (
+            <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle size={16} className="text-green-600" />
+                  <span className="font-medium text-green-800">완료된 배송</span>
+                </div>
+                <p className="text-sm text-green-600">총 {profile.total_deliveries}건</p>
               </div>
-              <p className="text-sm text-gray-600">서울 → 인천</p>
-              <p className="text-xs text-gray-500">10:30 완료</p>
             </div>
-            <p className="font-semibold text-gray-600">180,000원</p>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 
-  // 수익 탭 컨텐츠
   const EarningsContent = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <h3 className="font-semibold text-gray-900 mb-4">이번 주 수익</h3>
         
         <div className="text-center mb-6">
-          <p className="text-4xl font-bold text-blue-600">2,340,000원</p>
-          <p className="text-sm text-gray-600">총 15건 완료</p>
+          <p className="text-4xl font-bold text-blue-600">0원</p>
+          <p className="text-sm text-gray-600">총 {profile.total_deliveries}건 완료</p>
         </div>
         
-        <div className="space-y-3">
-          <div className="flex justify-between items-center py-2 border-b border-gray-100">
-            <span className="text-sm text-gray-600">월요일</span>
-            <span className="font-medium">480,000원</span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-gray-100">
-            <span className="text-sm text-gray-600">화요일</span>
-            <span className="font-medium">520,000원</span>
-          </div>
-          <div className="flex justify-between items-center py-2 border-b border-gray-100">
-            <span className="text-sm text-gray-600">오늘</span>
-            <span className="font-medium text-blue-600">540,000원</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">정산 정보</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-600">총 수익</span>
-            <span>2,340,000원</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">플랫폼 수수료 (8%)</span>
-            <span className="text-red-600">-187,200원</span>
-          </div>
-          <div className="flex justify-between font-medium pt-2 border-t border-gray-100">
-            <span>실수령액</span>
-            <span className="text-blue-600">2,152,800원</span>
-          </div>
+        <div className="text-center py-8 text-gray-500">
+          배송을 완료하면 수익이 표시됩니다
         </div>
       </div>
     </div>
   );
 
-  // 프로필 탭 컨텐츠
   const ProfileContent = () => (
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -239,23 +220,23 @@ const DriverMobileApp = () => {
             <User size={32} className="text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900">김운송</h3>
-            <p className="text-sm text-gray-600">기사 ID: DR001</p>
+            <h3 className="font-semibold text-gray-900">{profile.name}</h3>
+            <p className="text-sm text-gray-600">{profile.phone}</p>
             <div className="flex items-center space-x-1 mt-1">
               <Star size={16} className="fill-yellow-400 text-yellow-400" />
-              <span className="text-sm font-medium">4.8</span>
-              <span className="text-sm text-gray-500">(156건)</span>
+              <span className="text-sm font-medium">{profile.rating || '0.0'}</span>
+              <span className="text-sm text-gray-500">({profile.total_deliveries}건)</span>
             </div>
           </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
           <div className="text-center">
-            <p className="text-xl font-bold text-blue-600">156</p>
+            <p className="text-xl font-bold text-blue-600">{profile.total_deliveries}</p>
             <p className="text-sm text-gray-600">완료 배송</p>
           </div>
           <div className="text-center">
-            <p className="text-xl font-bold text-green-600">98%</p>
+            <p className="text-xl font-bold text-green-600">100%</p>
             <p className="text-sm text-gray-600">성공률</p>
           </div>
         </div>
@@ -266,15 +247,15 @@ const DriverMobileApp = () => {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">차량 종류</span>
-            <span>1톤 트럭</span>
+            <span>{profile.vehicle_type}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">적재량</span>
-            <span>1,000kg</span>
+            <span>{profile.vehicle_capacity}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">차량 번호</span>
-            <span>서울 12가 3456</span>
+            <span>{profile.vehicle_number}</span>
           </div>
         </div>
       </div>
@@ -290,7 +271,10 @@ const DriverMobileApp = () => {
           <ChevronRight size={20} className="text-gray-400" />
         </button>
         
-        <button className="w-full flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100"
+        >
           <span className="text-red-600">로그아웃</span>
           <ChevronRight size={20} className="text-gray-400" />
         </button>
@@ -310,14 +294,13 @@ const DriverMobileApp = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* 헤더 */}
       <header className="bg-white shadow-sm border-b border-gray-100 px-4 py-3 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Batcha 기사</h1>
             <div className="flex items-center space-x-2">
               <StatusBadge status={driverStatus} size="sm" />
-              <span className="text-sm text-gray-600">김운송님</span>
+              <span className="text-sm text-gray-600">{profile.name}님</span>
             </div>
           </div>
           
@@ -325,19 +308,17 @@ const DriverMobileApp = () => {
             <button className="p-2 text-gray-600 hover:text-gray-900 relative">
               <Bell size={24} />
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                2
+                0
               </span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* 메인 컨텐츠 */}
       <main className="p-4">
         {renderContent()}
       </main>
 
-      {/* 하단 네비게이션 */}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
