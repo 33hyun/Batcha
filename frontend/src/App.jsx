@@ -1,7 +1,7 @@
-import DriverMobileApp from './pages/DriverMobileApp'
+import AuthPage from './pages/AuthPage'
 
 function App() {
-  return <DriverMobileApp />
+  return <AuthPage />
 }
 
-export default App
+export default App;
