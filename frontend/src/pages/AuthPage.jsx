@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabase';
 import DriverMobileApp from './DriverMobileApp';
 import ProfileSetup from './ProfileSetup';
@@ -11,11 +11,43 @@ export default function AuthPage() {
   const [message, setMessage] = useState('');
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [checkingProfile, setCheckingProfile] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // 세션 체크 및 프로필 로드
+  useEffect(() => {
+    checkUser();
+
+    // 인증 상태 변경 리스너
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        checkProfile(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser(session.user);
+        await checkProfile(session.user.id);
+      }
+    } catch (error) {
+      console.error('세션 체크 실패:', error);
+    } finally {
+      setCheckingSession(false);
+    }
+  };
 
   // 프로필 확인
   const checkProfile = async (userId) => {
-    setCheckingProfile(true);
     try {
       const { data, error } = await supabase
         .from('driver_profiles')
@@ -30,8 +62,6 @@ export default function AuthPage() {
       setProfile(data);
     } catch (error) {
       console.error('프로필 체크 실패:', error);
-    } finally {
-      setCheckingProfile(false);
     }
   };
 
@@ -77,13 +107,13 @@ export default function AuthPage() {
     setProfile(profileData);
   };
 
-  // 로딩 중
-  if (checkingProfile) {
+  // 초기 로딩 중
+  if (checkingSession) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">프로필 확인 중...</p>
+          <p className="text-gray-600">로딩 중...</p>
         </div>
       </div>
     );
