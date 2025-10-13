@@ -7,7 +7,7 @@ export default function ProfileSetup({ userId, onComplete }) {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    vehicle_type: '1톤 트럭',
+    vehicle_type: '카고',
     vehicle_capacity: '',
     vehicle_number: ''
   });
