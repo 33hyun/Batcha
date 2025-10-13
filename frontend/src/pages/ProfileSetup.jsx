@@ -8,7 +8,7 @@ export default function ProfileSetup({ userId, onComplete }) {
     name: '',
     phone: '',
     vehicle_type: '1톤 트럭',
-    vehicle_capacity: '1,000kg',
+    vehicle_capacity: '',
     vehicle_number: ''
   });
 
@@ -20,7 +20,7 @@ export default function ProfileSetup({ userId, onComplete }) {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.phone || !formData.vehicle_number) {
+    if (!formData.name || !formData.phone || !formData.vehicle_number || !formData.vehicle_capacity) {
       alert('모든 필수 항목을 입력해주세요');
       return;
     }
@@ -28,6 +28,16 @@ export default function ProfileSetup({ userId, onComplete }) {
     setLoading(true);
 
     try {
+      // 적재량에서 숫자 추출 (예: "2.5톤" -> 2.5, "3톤" -> 3)
+      const capacityMatch = formData.vehicle_capacity.match(/[\d.]+/);
+      const capacityTons = capacityMatch ? parseFloat(capacityMatch[0]) : null;
+
+      if (!capacityTons) {
+        alert('적재량을 올바르게 입력해주세요 (예: 2.5톤, 3톤)');
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('driver_profiles')
         .insert([
@@ -37,6 +47,7 @@ export default function ProfileSetup({ userId, onComplete }) {
             phone: formData.phone,
             vehicle_type: formData.vehicle_type,
             vehicle_capacity: formData.vehicle_capacity,
+            capacity_tons: capacityTons,
             vehicle_number: formData.vehicle_number
           }
         ])
@@ -115,11 +126,11 @@ export default function ProfileSetup({ userId, onComplete }) {
                 onChange={handleChange}
                 className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
               >
-                <option value="1톤 트럭">1톤 트럭</option>
-                <option value="2.5톤 트럭">2.5톤 트럭</option>
-                <option value="5톤 트럭">5톤 트럭</option>
-                <option value="냉장탑차">냉장탑차</option>
-                <option value="윙바디">윙바디</option>
+                <option value="카고">카고</option>
+                <option value="탑차">탑차</option>
+                <option value="트레일러">트레일러</option>
+                <option value="냉동탑차">냉동탑차</option>
+                <option value="탱크로리">탱크로리</option>
               </select>
             </div>
           </div>
@@ -131,17 +142,32 @@ export default function ProfileSetup({ userId, onComplete }) {
             </label>
             <div className="relative">
               <Package size={20} className="absolute left-3 top-3.5 text-gray-400" />
-              <select
+              <input
+                type="text"
                 name="vehicle_capacity"
                 value={formData.vehicle_capacity}
-                onChange={handleChange}
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none appearance-none bg-white"
-              >
-                <option value="500kg">500kg</option>
-                <option value="1,000kg">1,000kg</option>
-                <option value="2,500kg">2,500kg</option>
-                <option value="5,000kg">5,000kg</option>
-              </select>
+                onChange={(e) => {
+                  let value = e.target.value;
+
+                  // 숫자와 소수점만 허용
+                  value = value.replace(/[^0-9.]/g, '');
+
+                  // 빈 값이 아니면 '톤' 붙이기
+                  if (value) {
+                    value = value + '톤';
+                  }
+
+                  handleChange({
+                    target: {
+                      name: 'vehicle_capacity',
+                      value,
+                    },
+                  });
+                }}
+                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                placeholder="숫자만 입력하세요 예: 25톤 = 25"
+                required
+              />
             </div>
           </div>
 
