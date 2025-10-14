@@ -41,7 +41,7 @@ const CargoCard = ({ cargo, driverCapacity, onAccept, onReject, showActions = fa
       {cargo.deadline_str && (
         <div className="mt-3 flex items-center space-x-2 text-sm text-gray-600">
           <Clock size={16} />
-          <span>마감: {cargo.deadline_str}</span>
+          <span>예상 소요 시간: {cargo.deadline_str}</span>
         </div>
       )}
 

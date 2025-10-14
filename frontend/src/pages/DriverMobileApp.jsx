@@ -39,8 +39,8 @@ const DriverMobileApp = () => {
     setUser(user);
     const profileData = await loadDriverProfile(user.id); 
     if (profileData) {
-      loadAvailableCargos(user.id, profileData); 
-      loadMyCargos(user.id);
+      await loadAvailableCargos(user.id, profileData); 
+      await loadMyCargos(user.id);
     }
   }
   setLoading(false);
@@ -253,37 +253,28 @@ const DriverMobileApp = () => {
           </div>
         );
       case 'earnings':
-        const totalEarnings = myCargos.reduce((sum, c) => sum + (c.expected_fare || 0), 0);
-        const commission = totalEarnings * 0.08;
-        const netEarnings = totalEarnings - commission;
-        return (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <h3 className="font-semibold text-gray-900 mb-4">총 수익</h3>
-              <div className="text-center mb-6">
-                <p className="text-4xl font-bold text-blue-600">${totalEarnings.toLocaleString()}</p>
-                <p className="text-sm text-gray-600">총 {myCargos.length}건 완료</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">정산 정보</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">총 수익</span>
-                  <span>${totalEarnings.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">플랫폼 수수료 (8%)</span>
-                  <span className="text-red-600">-${commission.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between font-medium pt-2 border-t border-gray-100">
-                  <span>실수령액</span>
-                  <span className="text-blue-600">${netEarnings.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
+  const totalEarnings = myCargos.reduce((sum, c) => sum + (c.expected_fare || 0), 0);
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 className="font-semibold text-gray-900 mb-4">총 수익</h3>
+        <div className="text-center mb-6">
+          <p className="text-4xl font-bold text-blue-600">${totalEarnings.toLocaleString()}</p>
+          <p className="text-sm text-gray-600">총 {myCargos.length}건 완료</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <h3 className="font-semibold text-gray-900 mb-3">정산 정보</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between font-medium pt-2 border-t border-gray-100">
+            <span>총 수익</span>
+            <span className="text-blue-600">${totalEarnings.toLocaleString()}</span>
           </div>
-        );
+        </div>
+      </div>
+    </div>
+  );
+
       case 'profile':
         return (
           <div className="space-y-4">
