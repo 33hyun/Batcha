@@ -1,10 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Truck, MapPin, Clock, Star, Phone, Navigation, Package, 
-  CheckCircle, AlertCircle, Play, Pause, Home, List, 
-  User, Settings, Bell, Search, Filter, ChevronRight,
-  DollarSign, Calendar, Route, Camera, MessageSquare
-} from 'lucide-react';
+import React from 'react';
+import { Home, List, DollarSign, User } from 'lucide-react';
 
 const BottomNav = ({ activeTab, onTabChange }) => {
   const tabs = [
@@ -35,4 +30,5 @@ const BottomNav = ({ activeTab, onTabChange }) => {
     </div>
   );
 };
+
 export default BottomNav;
